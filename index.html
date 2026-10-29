@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UniSync | UC • Planificador & Tutor IA</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Firebase SDKs (Compat para funcionar sin bloqueos de módulos locales) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+
+<body class="bg-[#0b0d13] text-slate-100 min-h-screen flex flex-col">
+
+    <!-- ========================================================= -->
+    <!-- PANTALLA DE LOGIN (FIREBASE GOOGLE AUTH + PERFIL)         -->
+    <!-- ========================================================= -->
+    <div id="auth-screen" class="fixed inset-0 z-50 bg-[#0b0d13] flex items-center justify-center p-4">
+        <div class="max-w-md w-full bg-[#131722] border border-slate-800/90 rounded-3xl p-8 shadow-2xl space-y-6">
+            <div class="flex flex-col items-center text-center">
+                <div
+                    class="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-600/30 mb-4">
+                    <i data-lucide="graduation-cap" class="w-8 h-8"></i>
+                </div>
+                <h1 class="text-2xl font-extrabold text-white tracking-tight">Bienvenido a UniSync</h1>
+                <p class="text-xs text-slate-400 mt-1.5 max-w-xs">
+                    Sincronización Cloud para PC y iPhone • Calendario Universidad de Carabobo & Tutor IA Gemini 2.5.
+                </p>
+            </div>
+
+            <div class="space-y-3">
+                <button onclick="loginWithFirebaseGoogle()"
+                    class="w-full py-3 px-4 bg-white hover:bg-slate-100 text-slate-900 font-semibold text-sm rounded-xl transition flex items-center justify-center gap-3 shadow-md">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24">
+                        <path fill="#4285F4"
+                            d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z" />
+                        <path fill="#34A853"
+                            d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.14C3.26 21.3 7.31 24 12 24z" />
+                        <path fill="#FBBC05"
+                            d="M5.28 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.99-3.14z" />
+                        <path fill="#EA4335"
+                            d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.99 3.14c.95-2.85 3.6-4.96 6.72-4.96z" />
+                    </svg>
+                    Iniciar sesión con Google (Cloud Sync)
+                </button>
+
+                <div class="relative flex py-2 items-center">
+                    <div class="flex-grow border-t border-slate-800"></div>
+                    <span class="flex-shrink mx-3 text-[11px] text-slate-500 uppercase tracking-wider">O acceso directo
+                        por correo</span>
+                    <div class="flex-grow border-t border-slate-800"></div>
+                </div>
+
+                <form onsubmit="loginWithCustomProfile(event)" class="space-y-3">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Nombre o Marca Personal</label>
+                        <input type="text" id="login-name" required value="Tiva Design"
+                            class="w-full bg-[#0b0d13] border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500" />
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Correo de Google</label>
+                        <input type="email" id="login-email" required value="tivadesignve@gmail.com"
+                            class="w-full bg-[#0b0d13] border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500" />
+                    </div>
+                    <button type="submit"
+                        class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-xl transition shadow-lg shadow-indigo-600/20">
+                        Entrar a mi Espacio Académico
+                    </button>
+                </form>
+            </div>
+
+            <p id="auth-sync-hint" class="text-[11px] text-slate-500 text-center leading-relaxed">
+                Tus materias, apuntes y horarios se sincronizan con tu cuenta en PC y móvil.
+            </p>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- BARRA SUPERIOR (5 PESTAÑAS INCLUYENDO APUNTES Y AJUSTES)  -->
+    <!-- ========================================================= -->
+    <header class="bg-[#11141d]/90 backdrop-blur-md border-b border-slate-800/80 sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
+            <!-- Logo y Selector de Semestre -->
+            <div class="flex items-center gap-2.5">
+                <div class="bg-rose-600 p-2 rounded-xl text-white shadow-md shadow-rose-600/20">
+                    <i data-lucide="calendar" class="w-5 h-5"></i>
+                </div>
+                <div class="flex items-center gap-2">
+                    <h1 class="font-bold text-base sm:text-lg tracking-tight text-white">UniSync</h1>
+                    <select id="header-semester-select" onchange="changeActiveSemester(this.value)"
+                        class="text-xs bg-slate-800 border border-slate-700 text-slate-200 px-2.5 py-1 rounded-full font-medium focus:outline-none cursor-pointer">
+                        <option value="1">1er Semestre (UC)</option>
+                        <option value="2">2º Semestre (UC)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Navegación Central (5 Pestañas como AgendaUni) -->
+            <nav class="flex items-center gap-1 bg-[#181c28] p-1 rounded-2xl border border-slate-800 overflow-x-auto">
+                <button onclick="switchTab('schedule')" id="tab-schedule"
+                    class="tab-btn px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-medium transition flex items-center gap-1.5 text-slate-400 hover:text-white shrink-0">
+                    <i data-lucide="calendar-days" class="w-3.5 h-3.5"></i> Semana
+                </button>
+                <button onclick="switchTab('tasks')" id="tab-tasks"
+                    class="tab-btn px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-medium transition flex items-center gap-1.5 text-slate-400 hover:text-white shrink-0">
+                    <i data-lucide="check-square" class="w-3.5 h-3.5"></i> Tareas
+                </button>
+                <button onclick="switchTab('dashboard')" id="tab-dashboard"
+                    class="tab-btn px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-medium transition flex items-center gap-1.5 bg-indigo-600 text-white shrink-0">
+                    <i data-lucide="target" class="w-3.5 h-3.5"></i> Exámenes
+                </button>
+                <button onclick="switchTab('notes')" id="tab-notes"
+                    class="tab-btn px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-medium transition flex items-center gap-1.5 text-slate-400 hover:text-white shrink-0">
+                    <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Apuntes
+                </button>
+                <button onclick="switchTab('settings')" id="tab-settings"
+                    class="tab-btn px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-medium transition flex items-center gap-1.5 text-slate-400 hover:text-white shrink-0">
+                    <i data-lucide="settings" class="w-3.5 h-3.5"></i> Ajustes
+                </button>
+            </nav>
+
+            <!-- Pomodoro + Estado Cloud + Perfil -->
+            <div class="flex items-center gap-2">
+                <span id="cloud-sync-indicator"
+                    class="hidden lg:inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                    title="Estado de sincronización">
+                    <i data-lucide="cloud" class="w-3 h-3"></i> Sync
+                </span>
+
+                <div
+                    class="hidden sm:flex items-center gap-2 bg-[#181c28] border border-slate-800 px-3 py-1.5 rounded-xl">
+                    <i data-lucide="timer" class="w-4 h-4 text-indigo-400"></i>
+                    <span id="pomo-timer" class="font-mono font-bold text-xs text-white">25:00</span>
+                    <button onclick="togglePomodoro()" id="pomo-btn"
+                        class="text-[11px] bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-0.5 rounded-md transition">
+                        Iniciar
+                    </button>
+                </div>
+
+                <button onclick="switchTab('settings')"
+                    class="flex items-center gap-2 bg-[#181c28] hover:bg-slate-800 border border-slate-800 pl-1.5 pr-2.5 py-1 rounded-full transition">
+                    <div id="nav-user-avatar"
+                        class="w-6 h-6 rounded-full bg-rose-500 text-white font-bold text-xs flex items-center justify-center">
+                        T</div>
+                    <span id="nav-user-name"
+                        class="text-xs font-medium text-slate-200 hidden md:inline max-w-[100px] truncate">Tiva
+                        Design</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ========================================================= -->
+    <!-- CONTENIDO PRINCIPAL                                       -->
+    <!-- ========================================================= -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- VISTA 1: EXÁMENES / DASHBOARD -->
+        <section id="view-dashboard" class="space-y-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-[#131722] border border-slate-800/80 p-5 rounded-2xl">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs text-slate-400 uppercase font-semibold">Entregas Pendientes</p>
+                            <h3 id="stat-pending" class="text-3xl font-bold mt-1 text-white">0</h3>
+                        </div>
+                        <div class="p-2.5 bg-indigo-500/10 text-indigo-400 rounded-xl"><i data-lucide="book-open"
+                                class="w-5 h-5"></i></div>
+                    </div>
+                </div>
+                <div class="bg-[#131722] border border-slate-800/80 p-5 rounded-2xl">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs text-slate-400 uppercase font-semibold">Horas de Estudio Req.</p>
+                            <h3 id="stat-hours" class="text-3xl font-bold mt-1 text-emerald-400">0h</h3>
+                        </div>
+                        <div class="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl"><i data-lucide="clock"
+                                class="w-5 h-5"></i></div>
+                    </div>
+                </div>
+                <div class="bg-[#131722] border border-slate-800/80 p-5 rounded-2xl">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs text-slate-400 uppercase font-semibold">Apuntes Guardados</p>
+                            <h3 id="stat-notes" class="text-3xl font-bold mt-1 text-amber-400">0</h3>
+                        </div>
+                        <div class="p-2.5 bg-amber-500/10 text-amber-400 rounded-xl"><i data-lucide="file-text"
+                                class="w-5 h-5"></i></div>
+                    </div>
+                </div>
+                <div class="bg-[#131722] border border-slate-800/80 p-5 rounded-2xl">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs text-slate-400 uppercase font-semibold">Bloques Asignados</p>
+                            <h3 id="stat-blocks" class="text-3xl font-bold mt-1 text-purple-400">0</h3>
+                        </div>
+                        <div class="p-2.5 bg-purple-500/10 text-purple-400 rounded-xl"><i data-lucide="calendar-check"
+                                class="w-5 h-5"></i></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 bg-[#131722] border border-slate-800/80 rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                            <i data-lucide="alert-circle" class="w-5 h-5 text-indigo-400"></i>
+                            Próximos Parciales y Evaluaciones (<span id="dash-semester-label">1er Semestre</span>)
+                        </h2>
+                        <button onclick="switchTab('tasks')" class="text-xs text-indigo-400 hover:underline">+ Añadir
+                            evaluación</button>
+                    </div>
+                    <div id="dashboard-tasks-list" class="space-y-3"></div>
+                </div>
+
+                <!-- Próximos Festivos Venezuela / UC -->
+                <div
+                    class="bg-[#131722] border border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between space-y-4">
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <span
+                                class="px-2.5 py-1 text-[11px] font-semibold bg-amber-500/15 text-amber-300 rounded-full border border-amber-500/30">
+                                🇻🇪 Calendario UC & Venezuela
+                            </span>
+                            <button onclick="openHolidaysModal()" class="text-xs text-indigo-400 hover:underline">Ver
+                                todos</button>
+                        </div>
+                        <h3 class="text-base font-bold text-white mt-3">Próximos Días No Laborables / Asuetos</h3>
+                        <div id="dashboard-holidays-preview" class="mt-3 space-y-2"></div>
+                    </div>
+
+                    <button onclick="toggleChat(true)"
+                        class="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                        Practicar con Tutor IA ahora
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- VISTA 2: TAREAS Y PARCIALES -->
+        <section id="view-tasks" class="hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="bg-[#131722] border border-slate-800/80 rounded-2xl p-6 h-fit">
+                    <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                        <i data-lucide="plus-circle" class="w-5 h-5 text-indigo-400"></i>
+                        Registrar Evaluación / Tarea
+                    </h2>
+                    <form id="task-form" onsubmit="addTask(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Materia</label>
+                            <select id="task-subject" required
+                                class="w-full bg-[#0b0d13] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white">
+                                <option value="Matemática I">Matemática I</option>
+                                <option value="Microeconomía I">Microeconomía I</option>
+                                <option value="Principios de Computación">Principios de Computación</option>
+                                <option value="Formación Integral">Formación Integral</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Título / Tema de
+                                Evaluación</label>
+                            <input type="text" id="task-title" required
+                                placeholder="Ej. Parcial 1: Límites y Continuidad"
+                                class="w-full bg-[#0b0d13] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white" />
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Fecha Límite</label>
+                                <input type="date" id="task-date" required
+                                    class="w-full bg-[#0b0d13] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Horas Estimadas</label>
+                                <input type="number" id="task-hours" min="1" max="20" value="3" required
+                                    class="w-full bg-[#0b0d13] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white" />
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Prioridad</label>
+                            <select id="task-priority"
+                                class="w-full bg-[#0b0d13] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white">
+                                <option value="Alta">Alta (Parcial / Proyecto)</option>
+                                <option value="Media">Media (Taller / Guía)</option>
+                                <option value="Baja">Baja (Lectura / Repaso)</option>
+                            </select>
+                        </div>
+                        <button type="submit"
+                            class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm rounded-xl transition">
+                            Guardar Actividad
+                        </button>
+                    </form>
+                </div>
+
+                <div class="lg:col-span-2 bg-[#131722] border border-slate-800/80 rounded-2xl p-6">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                        <h2 class="text-lg font-bold text-white">Listado de Actividades Académicas</h2>
+                        <button onclick="generateSmartSchedule()"
+                            class="px-3.5 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold rounded-xl transition flex items-center gap-1.5">
+                            <i data-lucide="sparkles" class="w-4 h-4"></i> Autoplanificar Semana
+                        </button>
+                    </div>
+                    <div id="full-tasks-list" class="space-y-3"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VISTA 3: SEMANA / HORARIO SMART -->
+        <section id="view-schedule" class="hidden space-y-4">
+            <div
+                class="bg-[#131722] border border-slate-800/80 rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <div class="flex flex-wrap items-center gap-2.5">
+                        <h2 class="text-lg sm:text-xl font-bold text-white">26 oct – 1 nov 2026</h2>
+                        <span id="schedule-semester-pill"
+                            class="text-xs px-2.5 py-0.5 rounded-full bg-rose-500/15 text-rose-300 border border-rose-500/30">1er
+                            semestre • semana 1</span>
+                        <span id="stat-class-hours"
+                            class="text-xs px-2.5 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/30 font-medium">●
+                            Clase 10h 30m</span>
+                        <span id="stat-study-hours"
+                            class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-medium">✦
+                            Estudio IA 0h</span>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <input type="file" id="schedule-img-input" accept="image/*" class="hidden"
+                        onchange="importScheduleFromImage(event)" />
+                    <button onclick="document.getElementById('schedule-img-input').click()" id="btn-scan-schedule"
+                        class="px-3.5 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-xl transition flex items-center gap-1.5">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i> Leer foto de horario con IA
+                    </button>
+                    <button onclick="openClassModal()"
+                        class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold rounded-xl transition flex items-center gap-1.5">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Añadir clase
+                    </button>
+                    <button onclick="generateSmartSchedule()"
+                        class="px-4 py-2 bg-rose-500 hover:bg-rose-400 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-lg shadow-rose-500/20">
+                        <i data-lucide="wand-2" class="w-4 h-4"></i> Autoplanificar
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-[#131722] border border-slate-800/80 rounded-2xl overflow-hidden">
+                <div class="overflow-x-auto custom-scrollbar">
+                    <div class="min-w-[920px]">
+                        <div id="calendar-header"
+                            class="grid grid-cols-[65px_repeat(7,1fr)] border-b border-slate-800 bg-[#0e111a]"></div>
+                        <div class="relative grid grid-cols-[65px_repeat(7,1fr)] h-[900px] bg-[#0b0d13]"
+                            id="calendar-body"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- VISTA 4: APUNTES (OPCIÓN 3 - CUADERNO INTELIGENTE + IA)   -->
+        <!-- ========================================================= -->
+        <section id="view-notes" class="hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                <!-- Formulario / Editor de Apuntes -->
+                <div class="lg:col-span-4 bg-[#131722] border border-slate-800/80 rounded-2xl p-6 h-fit space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-base font-bold text-white flex items-center gap-2">
+                            <i data-lucide="notebook-pen" class="w-5 h-5 text-indigo-400"></i>
+                            Nuevo Apunte / Fórmula
+                        </h2>
+                        <button type="button" onclick="generateAINoteSummary()"
+                            class="text-[11px] bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 px-2.5 py-1 rounded-lg flex items-center gap-1 transition">
+                            <i data-lucide="sparkles" class="w-3 h-3"></i> Generar con IA
+                        </button>
+                    </div>
+
+                    <form id="note-form" onsubmit="saveNote(event)" class="space-y-3">
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Asignatura</label>
+                            <select id="note-subject"
+                                class="w-full bg-[#0b0d13] border border-slate-800 rounded-xl px-3 py-2 text-xs text-white">
+                                <option value="Matemática I">Matemática I</option>
+                                <option value="Microeconomía I">Microeconomía I</option>
+                                <option value="Principios de Computación">Principios de Computación</option>
+                                <option value="Formación Integral">Formación Integral</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Título del Apunte</label>
+                            <input type="text" id="note-title" required
+                                placeholder="Ej. Fórmulas de Elasticidad Precio de la Demanda"
+                                class="w-full bg-[#0b0d13] border border-slate-800 rounded-xl px-3 py-2 text-xs text-white" />
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Contenido / Fórmulas / Resumen</label>
+                            <textarea id="note-content" rows="7" required
+                                placeholder="Escribe aquí tus notas de clase, teoremas de límites o pídele al Tutor IA que redacte una ficha de estudio..."
+                                class="w-full bg-[#0b0d13] border border-slate-800 rounded-xl p-3 text-xs text-white leading-relaxed custom-scrollbar"></textarea>
+                        </div>
+                        <button type="submit"
+                            class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-xl transition">
+                            Guardar en mis Apuntes
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Biblioteca de Apuntes por Materia -->
+                <div class="lg:col-span-8 bg-[#131722] border border-slate-800/80 rounded-2xl p-6 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h2 class="text-lg font-bold text-white">Biblioteca de Apuntes y Fórmulas</h2>
+                            <p class="text-xs text-slate-400">Sincronizados en la nube para repasar desde el teléfono
+                                antes de entrar al aula.</p>
+                        </div>
+                        <select id="notes-filter-subject" onchange="renderNotes()"
+                            class="bg-[#0b0d13] border border-slate-800 text-xs text-slate-200 px-3 py-2 rounded-xl">
+                            <option value="ALL">Todas las materias</option>
+                            <option value="Matemática I">Matemática I</option>
+                            <option value="Microeconomía I">Microeconomía I</option>
+                            <option value="Principios de Computación">Principios de Computación</option>
+                            <option value="Formación Integral">Formación Integral</option>
+                        </select>
+                    </div>
+
+                    <div id="notes-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Dinámico por JS -->
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- VISTA 5: AJUSTES (SEMESTRES UC + FESTIVOS VENEZUELA)      -->
+        <!-- ========================================================= -->
+        <section id="view-settings" class="hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+                <!-- Columna Izquierda -->
+                <div class="lg:col-span-4 space-y-5">
+                    <h2 class="text-xl font-extrabold text-white">Ajustes</h2>
+
+                    <!-- Tarjeta de Usuario + Estado Firebase -->
+                    <div class="bg-[#151821] border border-slate-800/90 rounded-2xl p-4 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3.5">
+                                <div id="settings-user-avatar"
+                                    class="w-11 h-11 rounded-full bg-rose-500 text-white font-bold text-lg flex items-center justify-center shadow-md">
+                                    T</div>
+                                <div>
+                                    <h3 id="settings-user-name" class="text-sm font-bold text-white leading-tight">Tiva
+                                        Design</h3>
+                                    <p id="settings-user-email" class="text-xs text-slate-400">tivadesignve@gmail.com
+                                    </p>
+                                </div>
+                            </div>
+                            <button onclick="logoutUser()"
+                                class="text-xs text-rose-400 hover:text-rose-300 font-medium px-2.5 py-1 rounded-lg bg-rose-500/10 border border-rose-500/20">
+                                Salir
+                            </button>
+                        </div>
+                        <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px]">
+                            <span class="text-slate-400">Sincronización Nube (PC / iPhone):</span>
+                            <span id="settings-cloud-status" class="text-emerald-400 font-semibold">Activa</span>
+                        </div>
+                    </div>
+
+                    <!-- Grupo: TU CURSO (Universidad de Carabobo) -->
+                    <div class="space-y-1.5">
+                        <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500 px-1">TU CURSO •
+                            UNIVERSIDAD DE CARABOBO</p>
+                        <div
+                            class="bg-[#151821] border border-slate-800/90 rounded-2xl divide-y divide-slate-800/70 overflow-hidden">
+                            <div class="p-3.5 flex items-center justify-between bg-slate-800/40">
+                                <div class="flex items-center gap-3">
+                                    <div class="p-2 rounded-xl bg-indigo-500/15 text-indigo-400"><i
+                                            data-lucide="graduation-cap" class="w-4 h-4"></i></div>
+                                    <span class="text-xs font-semibold text-white">Horario de clase</span>
+                                </div>
+                                <span id="settings-subjects-count" class="text-xs text-slate-400">4 asignaturas ›</span>
+                            </div>
+
+                            <!-- Selector de Semestre Activo -->
+                            <div class="p-3.5 flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="p-2 rounded-xl bg-purple-500/15 text-purple-400"><i data-lucide="layers"
+                                            class="w-4 h-4"></i></div>
+                                    <span class="text-xs font-medium text-slate-200">Período Académico</span>
+                                </div>
+                                <select id="settings-semester-select" onchange="changeActiveSemester(this.value)"
+                                    class="bg-transparent text-xs text-indigo-400 font-semibold focus:outline-none text-right cursor-pointer">
+                                    <option value="1" class="bg-slate-900">1er Semestre</option>
+                                    <option value="2" class="bg-slate-900">2º Semestre</option>
+                                </select>
+                            </div>
+
+                            <!-- Curso y Festivos (Venezuela / UC) -->
+                            <div onclick="openHolidaysModal()"
+                                class="p-3.5 flex items-center justify-between hover:bg-slate-800/30 transition cursor-pointer">
+                                <div class="flex items-center gap-3">
+                                    <div class="p-2 rounded-xl bg-rose-500/15 text-rose-400"><i
+                                            data-lucide="calendar-heart" class="w-4 h-4"></i></div>
+                                    <span class="text-xs font-medium text-slate-200">Curso y festivos (Venezuela /
+                                        UC)</span>
+                                </div>
+                                <span id="settings-holidays-count" class="text-xs text-slate-400">Ver calendario
+                                    ›</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Grupo: CÓMO ESTUDIAS -->
+                    <div class="space-y-1.5">
+                        <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500 px-1">CÓMO ESTUDIAS</p>
+                        <div
+                            class="bg-[#151821] border border-slate-800/90 rounded-2xl divide-y divide-slate-800/70 overflow-hidden">
+                            <div class="p-3.5 flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="p-2 rounded-xl bg-teal-500/15 text-teal-400"><i data-lucide="sliders"
+                                            class="w-4 h-4"></i></div>
+                                    <span class="text-xs font-medium text-slate-200">Planificador</span>
+                                </div>
+                                <span class="text-xs text-slate-400">4h/día ›</span>
+                            </div>
+                            <div class="p-3.5 flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="p-2 rounded-xl bg-rose-500/15 text-rose-400"><i data-lucide="timer"
+                                            class="w-4 h-4"></i></div>
+                                    <span class="text-xs font-medium text-slate-200">Técnicas de estudio</span>
+                                </div>
+                                <span class="text-xs text-slate-400">Pomodoro ›</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Columna Derecha: Horario por Semestres (1er Semestre y 2º Semestre) -->
+                <div class="lg:col-span-8 space-y-5">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2.5">
+                            <i data-lucide="graduation-cap" class="w-6 h-6 text-white"></i>
+                            <h2 class="text-xl font-extrabold text-white">Horario de clase • FACES UC</h2>
+                        </div>
+                        <button onclick="openHolidaysModal()"
+                            class="text-xs bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 px-3 py-1.5 rounded-xl font-medium transition">
+                            🇻🇪 Festivos UC / Venezuela
+                        </button>
+                    </div>
+
+                    <!-- Compartir con mi clase -->
+                    <div onclick="shareSchedule()"
+                        class="bg-[#151821] hover:bg-[#1a1e29] border border-slate-800/90 rounded-2xl p-4 flex items-center justify-between cursor-pointer transition">
+                        <div class="flex items-center gap-3.5">
+                            <div class="p-2.5 rounded-full bg-rose-500/15 text-rose-400"><i data-lucide="link"
+                                    class="w-4 h-4"></i></div>
+                            <div>
+                                <h4 class="text-xs font-bold text-white">Compartir con mi sección</h4>
+                                <p class="text-xs text-slate-400">Un enlace o código JSON: tus compañeros de la UC lo
+                                    añaden en un toque</p>
+                            </div>
+                        </div>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>
+                    </div>
+
+                    <!-- 1ER SEMESTRE -->
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between px-1">
+                            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                                1ER SEMESTRE • oct 2026 – mar 2027
+                            </p>
+                            <span id="badge-sem-1"
+                                class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-semibold">Activo</span>
+                        </div>
+                        <div
+                            class="bg-[#151821] border border-slate-800/90 rounded-2xl divide-y divide-slate-800/80 overflow-hidden">
+                            <div id="settings-classes-sem1" class="divide-y divide-slate-800/80"></div>
+                            <button onclick="openClassModal(null, 'Lunes', '08:00', 1)"
+                                class="w-full p-3.5 flex items-center gap-3 hover:bg-slate-800/30 transition text-left">
+                                <div
+                                    class="w-7 h-7 rounded-full bg-rose-500/15 text-rose-400 flex items-center justify-center">
+                                    <i data-lucide="plus" class="w-4 h-4"></i></div>
+                                <span class="text-xs font-semibold text-rose-400">Añadir clase al 1er Semestre</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 2º SEMESTRE -->
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between px-1">
+                            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                                2º SEMESTRE • abr 2027 – ago 2027
+                            </p>
+                            <span id="badge-sem-2"
+                                class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 hidden">Activo</span>
+                        </div>
+                        <div
+                            class="bg-[#151821] border border-slate-800/90 rounded-2xl divide-y divide-slate-800/80 overflow-hidden">
+                            <div id="settings-classes-sem2" class="divide-y divide-slate-800/80"></div>
+                            <button onclick="openClassModal(null, 'Lunes', '08:00', 2)"
+                                class="w-full p-3.5 flex items-center gap-3 hover:bg-slate-800/30 transition text-left">
+                                <div
+                                    class="w-7 h-7 rounded-full bg-rose-500/15 text-rose-400 flex items-center justify-center">
+                                    <i data-lucide="plus" class="w-4 h-4"></i></div>
+                                <span class="text-xs font-semibold text-rose-400">Añadir clase al 2º Semestre</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Leer horario de una foto con IA -->
+                    <div onclick="document.getElementById('schedule-img-input').click()"
+                        class="bg-[#151821] hover:bg-[#1a1e29] border border-slate-800/90 rounded-2xl p-4 flex items-center justify-between cursor-pointer transition">
+                        <div class="flex items-center gap-3.5">
+                            <div class="p-2.5 rounded-xl bg-purple-500/15 text-purple-400 border border-purple-500/20">
+                                <i data-lucide="sparkles" class="w-4 h-4"></i></div>
+                            <div>
+                                <h4 class="text-xs font-bold text-white">Leer el horario de una foto o PDF</h4>
+                                <p class="text-xs text-slate-400">Con IA: sube tu captura de inscripción UC y se acopla
+                                    al semestre activo</p>
+                            </div>
+                        </div>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ========================================================= -->
+    <!-- MODAL DE FESTIVOS VENEZUELA Y UNIVERSIDAD DE CARABOBO     -->
+    <!-- ========================================================= -->
+    <div id="holidays-modal"
+        class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div
+            class="bg-[#151821] border border-slate-700 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl max-h-[85vh] flex flex-col">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div>
+                    <h3 class="text-base font-bold text-white flex items-center gap-2">
+                        🇻🇪 Calendario de Festivos • Venezuela & UC
+                    </h3>
+                    <p class="text-xs text-slate-400">Feriados nacionales, regionales (Valencia/Carabobo) y asuetos
+                        universitarios</p>
+                </div>
+                <button onclick="closeHolidaysModal()" class="text-slate-400 hover:text-white"><i data-lucide="x"
+                        class="w-4 h-4"></i></button>
+            </div>
+
+            <div id="holidays-list-container" class="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar"></div>
+
+            <!-- Formulario para agregar asueto personalizado -->
+            <form onsubmit="addCustomHoliday(event)"
+                class="pt-3 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <input type="date" id="holiday-date" required
+                    class="bg-[#0b0d13] border border-slate-800 rounded-xl px-3 py-2 text-xs text-white" />
+                <input type="text" id="holiday-name" required placeholder="Ej. Semana del Economista UC"
+                    class="bg-[#0b0d13] border border-slate-800 rounded-xl px-3 py-2 text-xs text-white" />
+                <button type="submit"
+                    class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl px-3 py-2">
+                    + Añadir Festivo
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL PARA AÑADIR / EDITAR CLASE -->
+    <div id="class-modal"
+        class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="bg-[#151821] border border-slate-700 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="text-base font-bold text-white">Editar / Añadir Asignatura</h3>
+                <button onclick="closeClassModal()" class="text-slate-400 hover:text-white"><i data-lucide="x"
+                        class="w-4 h-4"></i></button>
+            </div>
+            <form id="class-form" onsubmit="saveClassBlock(event)" class="space-y-3">
+                <input type="hidden" id="class-id" />
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Semestre</label>
+                        <select id="class-semester"
+                            class="w-full bg-[#0b0d13] border border-slate-800 rounded-xl px-3 py-2 text-xs text-white">
+                            <option value="1">1er Semestre</option>
+                            <option value="2">2º Semestre</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Código</label>
+                        <input type="text" id="class-code" placeholder="MAT" required
+                            class="w-full bg-[#0b0d13] border border-slate-800 rounded-xl px-3 py-2 text-xs text-white" />
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Color</label>
+                        <select id="class-color"
+                            class="w-full bg-[#0b0d13] border border-slate-800 rounded-xl px-3 py-2 text-xs text-white">
+                            <option value="blue">Azul</option>
+                            <option value="teal">Turquesa</option>
+                            <option value="purple">Morado</option>
+                            <option value="rose">Vinotinto</option>
+                            <option value="amber">Ámbar</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Nombre de la Materia</label>
+                    <input type="text" id="class-subject" placeholder="Matemática I" required
+                        class="w-full bg-[#0b0d13] border border-slate-800 rounded-xl px-3 py-2 text-xs text-white" />
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Día</label>
+                        <select id="class-day"
+                            class="w-full bg-[#0b0d13] border border-slate-800 rounded-xl px-3 py-2 text-xs text-white">
+                            <option value="Lunes">Lunes</option>
+                            <option value="Martes">Martes</option>
+                            <option value="Miércoles">Miércoles</option>
+                            <option value="Jueves">Jueves</option>
+                            <option value="Viernes">Viernes</option>
+                            <option value="Sábado">Sábado</option>
+                            <option value="Domingo">Domingo</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Aula / Sección (Bárbula)</label>
+                        <input type="text" id="class-room" placeholder="Aula 1212 • 02"
+                            class="w-full bg-[#0b0d13] border border-slate-800 rounded-xl px-3 py-2 text-xs text-white" />
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Hora Inicio</label>
+                        <input type="time" id="class-start" value="08:00" required
+                            class="w-full bg-[#0b0d13] border border-slate-800 rounded-xl px-3 py-2 text-xs text-white" />
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Hora Fin</label>
+                        <input type="time" id="class-end" value="10:15" required
+                            class="w-full bg-[#0b0d13] border border-slate-800 rounded-xl px-3 py-2 text-xs text-white" />
+                    </div>
+                </div>
+                <div class="flex items-center justify-between pt-3 border-t border-slate-800">
+                    <button type="button" id="btn-delete-class" onclick="deleteCurrentClass()"
+                        class="text-xs text-rose-400 hover:underline hidden">Eliminar</button>
+                    <div class="flex gap-2 ml-auto">
+                        <button type="button" onclick="closeClassModal()"
+                            class="px-3 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs">Cancelar</button>
+                        <button type="submit"
+                            class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold">Guardar</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- BOTÓN Y VENTANA DEL TUTOR IA -->
+    <button onclick="toggleChat()"
+        class="fixed bottom-6 right-6 z-40 bg-indigo-600 hover:bg-indigo-500 text-white p-4 rounded-full shadow-2xl shadow-indigo-600/40 border border-indigo-400/30 transition transform hover:scale-105 flex items-center gap-2">
+        <i data-lucide="bot" class="w-6 h-6"></i>
+        <span class="text-xs font-semibold pr-1 hidden sm:inline">Tutor IA</span>
+    </button>
+
+    <aside id="ai-chat-panel"
+        class="fixed bottom-20 right-6 z-50 w-[92vw] sm:w-[400px] h-[540px] bg-[#131722] border border-slate-700/80 rounded-2xl shadow-2xl flex flex-col overflow-hidden hidden">
+        <div class="bg-[#181c28] px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white">
+                    <i data-lucide="sparkles" class="w-4 h-4"></i>
+                </div>
+                <div>
+                    <h3 class="text-sm font-bold text-white leading-none">Tutor IA Universitario</h3>
+                    <span class="text-[11px] text-emerald-400">Gemini 2.5 Flash • Guarda en Apuntes</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-1">
+                <button onclick="configureApiKey()" class="text-slate-400 hover:text-white p-1.5 rounded-lg"
+                    title="Configurar API Key"><i data-lucide="key" class="w-4 h-4"></i></button>
+                <button onclick="toggleChat(false)" class="text-slate-400 hover:text-white p-1.5 rounded-lg"><i
+                        data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+        </div>
+
+        <div
+            class="bg-[#0e111a] px-3 py-2 border-b border-slate-800 flex gap-1.5 overflow-x-auto text-[11px] custom-scrollbar">
+            <button onclick="quickPrompt('Hazme un formulario resumido de Límites y Continuidad para Matemática I.')"
+                class="shrink-0 bg-slate-800/90 hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-lg border border-slate-700">
+                Fórmulas Matemática I
+            </button>
+            <button
+                onclick="quickPrompt('Explícame Elasticidad Precio de la Demanda y Curvas de Indiferencia en Microeconomía I.')"
+                class="shrink-0 bg-slate-800/90 hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-lg border border-slate-700">
+                Resumen Microeconomía
+            </button>
+        </div>
+
+        <div id="chat-messages" class="flex-1 p-4 overflow-y-auto space-y-3 custom-scrollbar text-sm">
+            <div
+                class="bg-slate-800/80 border border-slate-700/60 text-slate-200 p-3 rounded-2xl rounded-tl-none max-w-[88%] leading-relaxed text-xs">
+                ¡Hola! Cada explicación o formulario que te genere tiene debajo el botón <b>"+ Guardar en Apuntes"</b>
+                para enviarlo directo a tu biblioteca.
+            </div>
+        </div>
+
+        <form onsubmit="sendChatMessage(event)"
+            class="p-3 bg-[#181c28] border-t border-slate-800 flex items-center gap-2">
+            <input type="text" id="chat-input" placeholder="Pide un resumen, fórmula o quiz de práctica..."
+                class="flex-1 bg-[#0b0d13] border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-indigo-500" />
+            <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-xl transition">
+                <i data-lucide="send" class="w-4 h-4"></i>
+            </button>
+        </form>
+    </aside>
+
+    <script src="./config.js"></script>
+    <script src="./app.js"></script>
+</body>
+
+</html>
